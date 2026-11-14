@@ -14,8 +14,8 @@ trap 'rm -rf $TMP' EXIT
 fail() { echo "SMOKE-FAIL: $1"; exit 1; }
 
 # 1. 平台检查 (本脚本只在 linux-amd64 CI 里跑)
-head -c 4 "$BIN" | od -An -tx1 | tr -d \' 
-\' | grep -q "^7f454c46" || fail "不是 ELF (GOOS 忘带?)"
+ELF_SIG=$(head -c 4 "$BIN" | od -An -tx1 | tr -d ' ')
+echo "$ELF_SIG" | grep -q "^7f454c46" || fail "不是 ELF (GOOS 忘带?)"
 
 # 2. 版本含构建标记
 VER=$("$BIN" -v)
