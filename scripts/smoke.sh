@@ -10,6 +10,7 @@
 set -u
 BIN=$1
 VARIANT=${2:-trim}
+[[ "$BIN" != */* ]] && BIN="./$BIN"   # 相对路径必须带 ./ 否则 bash 按 PATH 找命令
 TMP=$(mktemp -d)
 trap 'rm -rf $TMP' EXIT
 fail() { echo "SMOKE-FAIL: $1"; exit 1; }
