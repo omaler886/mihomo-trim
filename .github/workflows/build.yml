@@ -11,7 +11,7 @@ env:
 
 jobs:
   build:
-    if: ${{ !(github.ref_name == 'lite' && matrix.variant == 'trim') }}
+    if: ${{ github.ref_name != 'lite' || matrix.variant != 'trim' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
