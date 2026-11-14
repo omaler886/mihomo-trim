@@ -68,8 +68,8 @@ jobs:
           file mihomo-${{ matrix.variant }}-${{ matrix.platform.output }} || true
 
       - name: Smoke (linux-amd64 only)
-        if: matrix.platform.output == 'linux-amd64' && matrix.variant == 'trim'
-        run: bash scripts/smoke.sh mihomo-trim-linux-amd64 ${{ matrix.variant }}
+        if: matrix.platform.output == 'linux-amd64'
+        run: bash scripts/smoke.sh mihomo-${{ matrix.variant }}-linux-amd64 ${{ matrix.variant }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
