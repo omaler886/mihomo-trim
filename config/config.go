@@ -77,9 +77,6 @@ type Inbound struct {
 	TProxyPort        int            `json:"tproxy-port"`
 	MixedPort         int            `json:"mixed-port"`
 	Tun               LC.Tun         `json:"tun"`
-	TuicServer        LC.TuicServer  `json:"tuic-server"`
-	ShadowSocksConfig string         `json:"ss-config"`
-	VmessConfig       string         `json:"vmess-config"`
 	Authentication    []string       `json:"authentication"`
 	SkipAuthPrefixes  []netip.Prefix `json:"skip-auth-prefixes"`
 	LanAllowedIPs     []netip.Prefix `json:"lan-allowed-ips"`
@@ -331,21 +328,6 @@ type RawTun struct {
 	ProcessorsPerChannel int `yaml:"processors-per-channel" json:"processors-per-channel,omitempty"`
 }
 
-type RawTuicServer struct {
-	Enable                bool              `yaml:"enable" json:"enable"`
-	Listen                string            `yaml:"listen" json:"listen"`
-	Token                 []string          `yaml:"token" json:"token"`
-	Users                 map[string]string `yaml:"users" json:"users,omitempty"`
-	Certificate           string            `yaml:"certificate" json:"certificate"`
-	PrivateKey            string            `yaml:"private-key" json:"private-key"`
-	CongestionController  string            `yaml:"congestion-controller" json:"congestion-controller,omitempty"`
-	MaxIdleTime           int               `yaml:"max-idle-time" json:"max-idle-time,omitempty"`
-	AuthenticationTimeout int               `yaml:"authentication-timeout" json:"authentication-timeout,omitempty"`
-	ALPN                  []string          `yaml:"alpn" json:"alpn,omitempty"`
-	MaxUdpRelayPacketSize int               `yaml:"max-udp-relay-packet-size" json:"max-udp-relay-packet-size,omitempty"`
-	CWND                  int               `yaml:"cwnd" json:"cwnd,omitempty"`
-}
-
 type RawIPTables struct {
 	Enable           bool     `yaml:"enable" json:"enable"`
 	InboundInterface string   `yaml:"inbound-interface" json:"inbound-interface"`
@@ -407,8 +389,6 @@ type RawConfig struct {
 	RedirPort                     int                     `yaml:"redir-port" json:"redir-port"`
 	TProxyPort                    int                     `yaml:"tproxy-port" json:"tproxy-port"`
 	MixedPort                     int                     `yaml:"mixed-port" json:"mixed-port"`
-	ShadowSocksConfig             string                  `yaml:"ss-config" json:"ss-config"`
-	VmessConfig                   string                  `yaml:"vmess-config" json:"vmess-config"`
 	InboundTfo                    bool                    `yaml:"inbound-tfo" json:"inbound-tfo"`
 	InboundMPTCP                  bool                    `yaml:"inbound-mptcp" json:"inbound-mptcp"`
 	Authentication                []string                `yaml:"authentication" json:"authentication"`
@@ -460,7 +440,6 @@ type RawConfig struct {
 	DNS           RawDNS                    `yaml:"dns" json:"dns"`
 	NTP           RawNTP                    `yaml:"ntp" json:"ntp"`
 	Tun           RawTun                    `yaml:"tun" json:"tun"`
-	TuicServer    RawTuicServer             `yaml:"tuic-server" json:"tuic-server"`
 	IPTables      RawIPTables               `yaml:"iptables" json:"iptables"`
 	Experimental  RawExperimental           `yaml:"experimental" json:"experimental"`
 	Profile       RawProfile                `yaml:"profile" json:"profile"`
@@ -553,19 +532,6 @@ func DefaultRawConfig() *RawConfig {
 			RecvMsgX:             true,
 			SendMsgX:             false, // In the current implementation, if enabled, the kernel may freeze during multi-thread downloads, so it is disabled by default.
 			ProcessorsPerChannel: 1,     // For most users, memory usage is more important than peak performance. Setting this to 1 can significantly reduce memory consumption.
-		},
-		TuicServer: RawTuicServer{
-			Enable:                false,
-			Token:                 nil,
-			Users:                 nil,
-			Certificate:           "",
-			PrivateKey:            "",
-			Listen:                "",
-			CongestionController:  "",
-			MaxIdleTime:           15000,
-			AuthenticationTimeout: 1000,
-			ALPN:                  []string{"h3"},
-			MaxUdpRelayPacketSize: 1500,
 		},
 		IPTables: RawIPTables{
 			Enable:           false,
@@ -727,11 +693,6 @@ func ParseRawConfig(rawCfg *RawConfig) (*Config, error) {
 		return nil, err
 	}
 
-	err = parseTuicServer(rawCfg.TuicServer, config.General)
-	if err != nil {
-		return nil, err
-	}
-
 	config.Users = parseAuthentication(rawCfg.Authentication)
 
 	config.Tunnels = rawCfg.Tunnels
@@ -769,8 +730,6 @@ func parseGeneral(cfg *RawConfig) (*General, error) {
 			RedirPort:         cfg.RedirPort,
 			TProxyPort:        cfg.TProxyPort,
 			MixedPort:         cfg.MixedPort,
-			ShadowSocksConfig: cfg.ShadowSocksConfig,
-			VmessConfig:       cfg.VmessConfig,
 			AllowLan:          cfg.AllowLan,
 			SkipAuthPrefixes:  cfg.SkipAuthPrefixes,
 			LanAllowedIPs:     cfg.LanAllowedIPs,
@@ -1750,24 +1709,6 @@ func parseTun(rawTun RawTun, dns *DNS, general *General) error {
 		ProcessorsPerChannel: rawTun.ProcessorsPerChannel,
 	}
 
-	return nil
-}
-
-func parseTuicServer(rawTuic RawTuicServer, general *General) error {
-	general.TuicServer = LC.TuicServer{
-		Enable:                rawTuic.Enable,
-		Listen:                rawTuic.Listen,
-		Token:                 rawTuic.Token,
-		Users:                 rawTuic.Users,
-		Certificate:           rawTuic.Certificate,
-		PrivateKey:            rawTuic.PrivateKey,
-		CongestionController:  rawTuic.CongestionController,
-		MaxIdleTime:           rawTuic.MaxIdleTime,
-		AuthenticationTimeout: rawTuic.AuthenticationTimeout,
-		ALPN:                  rawTuic.ALPN,
-		MaxUdpRelayPacketSize: rawTuic.MaxUdpRelayPacketSize,
-		CWND:                  rawTuic.CWND,
-	}
 	return nil
 }
 

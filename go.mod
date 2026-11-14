@@ -4,10 +4,8 @@ go 1.20
 
 require (
 	github.com/bahlo/generic-list-go v0.2.0
-	github.com/coreos/go-iptables v0.8.0
 	github.com/dlclark/regexp2 v1.12.0
 	github.com/easytier/easytier/easytier-go v0.0.0-20261111015056-2abb1676b475
-	github.com/enfein/mieru/v3 v3.39.0
 	github.com/gobwas/ws v1.4.0
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/golang/snappy v1.0.0
@@ -18,13 +16,9 @@ require (
 	github.com/metacubex/blake3 v0.1.0
 	github.com/metacubex/chacha v0.1.5
 	github.com/metacubex/chi v0.1.1
-	github.com/metacubex/connect-ip-go v0.0.0-20260727083417-67ccdb0cf771
 	github.com/metacubex/cpu v0.1.2
-	github.com/metacubex/edwards25519 v1.2.0
 	github.com/metacubex/fswatch v0.1.1
-	github.com/metacubex/gopacket v1.1.20-0.20230608035415-7e2f98a3e759
 	github.com/metacubex/http v0.1.8
-	github.com/metacubex/jls-quic-go v0.0.0-20260727080412-732f2fc9a34d
 	github.com/metacubex/jls-tls v0.0.0-20260723084315-67adc0e2f796
 	github.com/metacubex/kcp-go v0.0.0-20260105040817-550693377604
 	github.com/metacubex/mhurl v0.1.0
@@ -43,7 +37,6 @@ require (
 	github.com/metacubex/sing-vmess v0.2.5
 	github.com/metacubex/sing-wireguard v0.0.0-20261002050126-e5fa1a607406
 	github.com/metacubex/smux v0.0.0-20260105030934-d0c8756d3141
-	github.com/metacubex/ssh v0.1.0
 	github.com/metacubex/tailscale v0.0.0-20260821153257-ff0ecd818181
 	github.com/metacubex/tfo-go v0.0.0-20261026151606-08d83ec08c84
 	github.com/metacubex/tls v0.1.9
@@ -57,7 +50,6 @@ require (
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.12.1
 	github.com/vmihailenco/msgpack/v5 v5.4.1
-	github.com/yosida95/uritemplate/v3 v3.0.2
 	gitlab.com/go-extension/aes-ccm v0.0.0-20230221065045-e58665ef23c7
 	go.uber.org/automaxprocs v1.6.0
 	go.yaml.in/yaml/v3 v3.0.5
@@ -88,7 +80,6 @@ require (
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/windows v1.0.1 // indirect
 	github.com/coder/websocket v1.8.12 // indirect
-	github.com/dunglas/httpsfv v1.0.2 // indirect
 	github.com/ericlagergren/aegis v0.0.0-20250325060835-cd0defd64358 // indirect
 	github.com/ericlagergren/polyval v0.0.0-20220411101811-e25bc10ba391 // indirect
 	github.com/ericlagergren/siv v0.0.0-20220507050439-0b757b3aa5f1 // indirect
@@ -110,6 +101,7 @@ require (
 	github.com/klauspost/reedsolomon v1.12.3 // indirect
 	github.com/mdlayher/socket v0.5.1 // indirect
 	github.com/metacubex/ascon v0.1.0 // indirect
+	github.com/metacubex/edwards25519 v1.2.0 // indirect
 	github.com/metacubex/gvisor v0.0.0-20260922041103-e2cbcd6e7400 // indirect
 	github.com/metacubex/hkdf v0.1.0 // indirect
 	github.com/metacubex/hpke v0.1.0 // indirect

@@ -34,41 +34,6 @@ func ConvertsV2Ray(buf []byte) ([]map[string]any, error) {
 
 		scheme = strings.ToLower(scheme)
 		switch scheme {
-		case "hysteria":
-			urlHysteria, err := url.Parse(line)
-			if err != nil {
-				continue
-			}
-
-			query := urlHysteria.Query()
-			name := uniqueName(names, urlHysteria.Fragment)
-			hysteria := make(map[string]any, 20)
-
-			hysteria["name"] = name
-			hysteria["type"] = scheme
-			hysteria["server"] = urlHysteria.Hostname()
-			hysteria["port"] = urlHysteria.Port()
-			hysteria["sni"] = query.Get("peer")
-			hysteria["obfs"] = query.Get("obfs")
-			if alpn := query.Get("alpn"); alpn != "" {
-				hysteria["alpn"] = strings.Split(alpn, ",")
-			}
-			hysteria["auth_str"] = query.Get("auth")
-			hysteria["protocol"] = query.Get("protocol")
-			up := query.Get("up")
-			down := query.Get("down")
-			if up == "" {
-				up = query.Get("upmbps")
-			}
-			if down == "" {
-				down = query.Get("downmbps")
-			}
-			hysteria["down"] = down
-			hysteria["up"] = up
-			hysteria["skip-cert-verify"], _ = strconv.ParseBool(query.Get("insecure"))
-
-			proxies = append(proxies, hysteria)
-
 		case "hysteria2", "hy2", "hysteria2+realm", "hy2+realm":
 			realmMode := strings.HasSuffix(scheme, "+realm")
 			hopLine, ports := splitHysteria2Ports(line)
@@ -114,49 +79,6 @@ func ConvertsV2Ray(buf []byte) ([]map[string]any, error) {
 			}
 
 			proxies = append(proxies, hysteria2)
-
-		case "tuic":
-			// A temporary unofficial TUIC share link standard
-			// Modified from https://github.com/daeuniverse/dae/discussions/182
-			// Changes:
-			//   1. Support TUICv4, just replace uuid:password with token
-			//   2. Remove `allow_insecure` field
-			urlTUIC, err := url.Parse(line)
-			if err != nil {
-				continue
-			}
-			query := urlTUIC.Query()
-
-			tuic := make(map[string]any, 20)
-			tuic["name"] = uniqueName(names, urlTUIC.Fragment)
-			tuic["type"] = scheme
-			tuic["server"] = urlTUIC.Hostname()
-			tuic["port"] = urlTUIC.Port()
-			tuic["udp"] = true
-			password, v5 := urlTUIC.User.Password()
-			if v5 {
-				tuic["uuid"] = urlTUIC.User.Username()
-				tuic["password"] = password
-			} else {
-				tuic["token"] = urlTUIC.User.Username()
-			}
-			if cc := query.Get("congestion_control"); cc != "" {
-				tuic["congestion-controller"] = cc
-			}
-			if alpn := query.Get("alpn"); alpn != "" {
-				tuic["alpn"] = strings.Split(alpn, ",")
-			}
-			if sni := query.Get("sni"); sni != "" {
-				tuic["sni"] = sni
-			}
-			if query.Get("disable_sni") == "1" {
-				tuic["disable-sni"] = true
-			}
-			if udpRelayMode := query.Get("udp_relay_mode"); udpRelayMode != "" {
-				tuic["udp-relay-mode"] = udpRelayMode
-			}
-
-			proxies = append(proxies, tuic)
 
 		case "trojan":
 			urlTrojan, err := url.Parse(line)
@@ -492,65 +414,6 @@ func ConvertsV2Ray(buf []byte) ([]map[string]any, error) {
 
 			proxies = append(proxies, ss)
 
-		case "ssr":
-			dcBuf, err := TryDecodeBase64(body)
-			if err != nil {
-				continue
-			}
-
-			// ssr://host:port:protocol:method:obfs:urlsafebase64pass/?obfsparam=urlsafebase64param&protoparam=urlsafebase64param&remarks=urlsafebase64remarks&group=urlsafebase64group&udpport=0&uot=1
-
-			before, after, ok := strings.Cut(string(dcBuf), "/?")
-			if !ok {
-				continue
-			}
-
-			beforeArr := strings.Split(before, ":")
-
-			if len(beforeArr) != 6 {
-				continue
-			}
-
-			host := beforeArr[0]
-			port := beforeArr[1]
-			protocol := beforeArr[2]
-			method := beforeArr[3]
-			obfs := beforeArr[4]
-			password := decodeUrlSafe(urlSafe(beforeArr[5]))
-
-			query, err := url.ParseQuery(urlSafe(after))
-			if err != nil {
-				continue
-			}
-
-			remarks := decodeUrlSafe(query.Get("remarks"))
-			name := uniqueName(names, remarks)
-
-			obfsParam := decodeUrlSafe(query.Get("obfsparam"))
-			protocolParam := decodeUrlSafe(query.Get("protoparam"))
-
-			ssr := make(map[string]any, 20)
-
-			ssr["name"] = name
-			ssr["type"] = scheme
-			ssr["server"] = host
-			ssr["port"] = port
-			ssr["cipher"] = method
-			ssr["password"] = password
-			ssr["obfs"] = obfs
-			ssr["protocol"] = protocol
-			ssr["udp"] = true
-
-			if obfsParam != "" {
-				ssr["obfs-param"] = obfsParam
-			}
-
-			if protocolParam != "" {
-				ssr["protocol-param"] = protocolParam
-			}
-
-			proxies = append(proxies, ssr)
-
 		case "socks", "socks5", "socks5h", "http", "https":
 			link, err := url.Parse(line)
 			if err != nil {
@@ -645,75 +508,6 @@ func ConvertsV2Ray(buf []byte) ([]map[string]any, error) {
 			anytls["udp"] = true
 
 			proxies = append(proxies, anytls)
-
-		case "mierus":
-			urlMieru, err := url.Parse(line)
-			if err != nil {
-				continue
-			}
-
-			query := urlMieru.Query()
-
-			server := urlMieru.Hostname()
-			if server == "" {
-				continue
-			}
-			username := urlMieru.User.Username()
-			password, _ := urlMieru.User.Password()
-
-			baseName := urlMieru.Fragment
-			if baseName == "" {
-				baseName = query.Get("profile")
-			}
-			if baseName == "" {
-				baseName = server
-			}
-
-			multiplexing := query.Get("multiplexing")
-			handshakeMode := query.Get("handshake-mode")
-			trafficPattern := query.Get("traffic-pattern")
-
-			portList := query["port"]
-			protocolList := query["protocol"]
-			if len(portList) == 0 || len(portList) != len(protocolList) {
-				continue
-			}
-
-			for i, port := range portList {
-				protocol := protocolList[i]
-				name := uniqueName(names, fmt.Sprintf("%s:%s/%s", baseName, port, protocol))
-
-				mieru := make(map[string]any, 15)
-				mieru["name"] = name
-				mieru["type"] = "mieru"
-				mieru["server"] = server
-				mieru["transport"] = protocol
-				mieru["udp"] = true
-				mieru["username"] = username
-				mieru["password"] = password
-
-				if strings.Contains(port, "-") {
-					mieru["port-range"] = port
-				} else {
-					portNum, err := strconv.Atoi(port)
-					if err != nil {
-						continue
-					}
-					mieru["port"] = portNum
-				}
-
-				if multiplexing != "" {
-					mieru["multiplexing"] = multiplexing
-				}
-				if handshakeMode != "" {
-					mieru["handshake-mode"] = handshakeMode
-				}
-				if trafficPattern != "" {
-					mieru["traffic-pattern"] = trafficPattern
-				}
-
-				proxies = append(proxies, mieru)
-			}
 		}
 	}
 
