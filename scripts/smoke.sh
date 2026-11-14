@@ -2,10 +2,11 @@
 # mihomo-trim 冒烟 CI: 踩坑固化
 # 用法: bash scripts/smoke.sh <二进制路径> <trim|lite>
 # 断言:
-#  1. 二进制是目标平台 ELF/PE (GOOS 忘带会产出错平台二进制)
-#  2. 保留协议配置解析通过
-#  3. 被裁协议全部报 unsupport proxy type (裁剪零残留)
-#  4. 版本号带 trim/lite 标记 (with_gvisor 构建生效)
+#  1. 二进制是目标平台 ELF (GOOS 忘带会产出错平台二进制)
+#  2. 版本号带 trim/lite 标记
+#  3. 保留协议配置解析通过
+#  4. 被裁协议全部报 unsupport proxy type (裁剪零残留)
+#  5. lite 无服务端 listener / trim 保留服务端
 set -u
 BIN=$1
 VARIANT=${2:-trim}
@@ -13,16 +14,19 @@ TMP=$(mktemp -d)
 trap 'rm -rf $TMP' EXIT
 fail() { echo "SMOKE-FAIL: $1"; exit 1; }
 
-# 1. 平台检查 (本脚本只在 linux-amd64 CI 里跑)
+# 1. 平台检查
 ELF_SIG=$(head -c 4 "$BIN" | od -An -tx1 | tr -d ' ')
 echo "$ELF_SIG" | grep -q "^7f454c46" || fail "不是 ELF (GOOS 忘带?)"
 
-# 2. 版本含构建标记
+# 2. 版本含构建标记 (CI 版本形如 trim-<sha> / lite-<sha>)
 VER=$("$BIN" -v)
-echo "$VER" | grep -qE "(trim|lite)" || fail "版本缺 trim/lite 标记: $VER"
 echo "version: $VER"
+case "$VER" in
+  *trim*|*lite*) ;;
+  *) fail "版本缺 trim/lite 标记: $VER" ;;
+esac
 
-# 3. 保留协议解析通过 (组网类含 wireguard/zerotier; tailscale 需 with_gvisor, 若为 stub 则显式跳过报错也算过)
+# 3. 保留协议解析通过
 cat > "$TMP/kept.yaml" <<'EOF'
 proxies:
   - {name: ss1, type: ss, server: 1.2.3.4, port: 443, cipher: aes-128-gcm, password: x}
@@ -42,7 +46,7 @@ EOF
 grep -q "test is successful" "$TMP/kept.log" || { cat "$TMP/kept.log"; fail "保留协议配置解析失败"; }
 echo "kept-protocols: PASS"
 
-# 4. 被裁协议逐个断言 unsupport (仅 trim; lite 同样继承这些删除)
+# 4. 被裁协议逐个断言 unsupport
 for p in ssr tuic snell hysteria mieru sudoku shadowquic masque trusttunnel gost-relay ssh; do
   printf 'proxies:\n  - {name: bad, type: %s, server: 1.2.3.4, port: 443}\nrules:\n  - MATCH,DIRECT\n' "$p" > "$TMP/rm.yaml"
   if "$BIN" -t -d "$TMP" -f "$TMP/rm.yaml" > "$TMP/rm.log" 2>&1 && grep -q "test is successful" "$TMP/rm.log"; then
