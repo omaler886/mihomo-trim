@@ -19,7 +19,7 @@ echo "$ELF_SIG" | grep -q "^7f454c46" || fail "不是 ELF (GOOS 忘带?)"
 
 # 2. 版本含构建标记
 VER=$("$BIN" -v)
-echo "$VER" | grep -qE "mihomo (trim|lite)" || fail "版本缺 trim/lite 标记: $VER"
+echo "$VER" | grep -qE "mihomo-(trim|lite)" || fail "版本缺 trim/lite 标记: $VER"
 echo "version: $VER"
 
 # 3. 保留协议解析通过 (组网类含 wireguard/zerotier; tailscale 需 with_gvisor, 若为 stub 则显式跳过报错也算过)
