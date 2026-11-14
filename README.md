@@ -1,101 +1,41 @@
-<h1 align="center">
-  <img src="Meta.png" alt="Meta Kennel" width="200">
-  <br>Meta Kernel<br>
-</h1>
+# mihomo-trim
 
-<h3 align="center">Another Mihomo Kernel.</h3>
+[mihomo](https://github.com/MetaCubeX/mihomo) (Clash.Meta 内核) 的精简裁剪版，基于官方 Meta 分支 `0455d0d`（2026-11-11）裁剪。
 
-<p align="center">
-  <a href="https://goreportcard.com/report/github.com/MetaCubeX/mihomo">
-    <img src="https://goreportcard.com/badge/github.com/MetaCubeX/mihomo?style=flat-square">
-  </a>
-  <img src="https://img.shields.io/github/go-mod/go-version/MetaCubeX/mihomo/Alpha?style=flat-square">
-  <a href="https://github.com/MetaCubeX/mihomo/releases">
-    <img src="https://img.shields.io/github/release/MetaCubeX/mihomo/all.svg?style=flat-square">
-  </a>
-  <a href="https://github.com/MetaCubeX/mihomo">
-    <img src="https://img.shields.io/badge/release-Meta-00b4f0?style=flat-square">
-  </a>
-</p>
+## 分支与产物
 
-## Features
+| 分支 | 说明 |
+|---|---|
+| `main` | **trim**：删 11 个协议 |
+| `lite` | **lite**：trim 基础上再删全部服务端 listener（纯客户端） |
 
-- Local HTTP/HTTPS/SOCKS server with authentication support
-- VMess, VLESS, Shadowsocks, Trojan, Snell, TUIC, Hysteria protocol support
-- Built-in DNS server that aims to minimize DNS pollution attack impact, supports DoH/DoT upstream and fake IP.
-- Rules based off domains, GEOIP, IPCIDR or Process to forward packets to different nodes
-- Remote groups allow users to implement powerful rules. Supports automatic fallback, load balancing or auto select node
-  based off latency
-- Remote providers, allowing users to get node lists remotely instead of hard-coding in config
-- Netfilter TCP redirecting. Deploy Mihomo on your Internet gateway with `iptables`.
-- Comprehensive HTTP RESTful API controller
+Actions 自动构建（push 触发，产物挂 Prerelease）：
+- linux-amd64 / linux-arm64
+- android-arm64-v8 / android-armv7（手机用）
+- windows-amd64
+- 构建参数与官方 release 同款：`-tags with_gvisor -trimpath -ldflags "-s -w"`
 
-## Dashboard
+## trim 删了什么
 
-A web dashboard with first-class support for this project has been created; it can be checked out at [metacubexd](https://github.com/MetaCubeX/metacubexd).
+**删除的 11 个协议**（出站 + 对应服务端 + 传输层全链路）：
+`ssr` `tuic` `snell` `hysteria(v1)` `mieru` `sudoku` `ssh` `masque` `gost-relay` `trusttunnel` `shadowquic`
 
-## Configration example
+**保留**：
+- 代理协议：vless / vmess / hysteria2 / ss / trojan / anytls / zerotier
+- 组网类：wireguard / openvpn / tailscale / easytier
+- 通用代理：socks5 / http；功能出站：dns / rematch / direct / reject
+- 传输层插件：xhttp / mkcp / kcptun / gun / shadowtls / restls / jls / tlsmirror / simple-obfs / v2ray-plugin / gost-plugin
 
-Configuration example is located at [/docs/config.yaml](https://github.com/MetaCubeX/mihomo/blob/Alpha/docs/config.yaml).
+**lite 额外删除**：全部对外服务端 listener（ss/vmess/vless/trojan/hy2/realm/anytls server）+ 内嵌 ss/vmess 服务端 + `ss-config`/`vmess-config` API；保留本地入口（socks/http/mixed/tun/redir/tproxy/tunnel/inner）。
 
-## Docs
+## 验证（两台 LXC 对拉实测）
 
-Documentation can be found in [mihomo Docs](https://wiki.metacubex.one/).
+- 31 条路径矩阵（ss 全密码族+全插件、vmess 全传输、vless 全传输+reality+xhttp、trojan+reality、hy2、anytls、wg/ovpn/easytier）：trim / 官方 Meta / 官方 Alpha / lite 四方 **28/31 全过且失败集合逐字节一致**，3 个失败为官方原生缺口（vmess-grpc 服务端不协商 h2 ALPN、hy2-realm 需 realm 控制面、easytier 轮内成网时序）
+- 互操作：trim ↔ 官方 Meta 双向 8/8 协议互通
+- 被裁 11 协议 100% 报 `unsupport proxy type`
+- 性能：延迟 4-10ms、TLS 路径 100-350MB/s（与官方同级）；体积比官方小 ~8-10%；lite 内存最低
+- 并发：6 实例并发压测无死亡、无 OOM
 
-## For development
+## CI 冒烟（scripts/smoke.sh）
 
-Requirements:
-[Go 1.20 or newer](https://go.dev/dl/)
-
-Build mihomo:
-
-```shell
-git clone https://github.com/MetaCubeX/mihomo.git
-cd mihomo && go mod download
-go build
-```
-
-Set go proxy if a connection to GitHub is not possible:
-
-```shell
-go env -w GOPROXY=https://goproxy.io,direct
-```
-
-Build with gvisor tun stack:
-
-```shell
-go build -tags with_gvisor
-```
-
-### IPTABLES configuration
-
-Work on Linux OS which supported `iptables`
-
-```yaml
-# Enable the TPROXY listener
-tproxy-port: 9898
-
-iptables:
-  enable: true # default is false
-  inbound-interface: eth0 # detect the inbound interface, default is 'lo'
-```
-
-## Debugging
-
-Check [wiki](https://wiki.metacubex.one/api/#debug) to get an instruction on using debug
-API.
-
-## Credits
-
-- [Dreamacro/clash](https://github.com/Dreamacro/clash)
-- [SagerNet/sing-box](https://github.com/SagerNet/sing-box)
-- [riobard/go-shadowsocks2](https://github.com/riobard/go-shadowsocks2)
-- [v2ray/v2ray-core](https://github.com/v2ray/v2ray-core)
-- [WireGuard/wireguard-go](https://github.com/WireGuard/wireguard-go)
-- [yaling888/clash-plus-pro](https://github.com/yaling888/clash)
-
-## License
-
-This software is released under the GPL-3.0 license.
-
-**In addition, any downstream projects not affiliated with `MetaCubeX` shall not contain the word `mihomo` in their names.**
+每次构建断言：二进制平台正确、保留协议可解析、11 个被裁协议全部 unsupport、lite 无服务端 listener、版本含构建标记。

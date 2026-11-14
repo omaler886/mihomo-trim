@@ -40,7 +40,6 @@ type configSchema struct {
 	TProxyPort        *int                     `json:"tproxy-port"`
 	MixedPort         *int                     `json:"mixed-port"`
 	Tun               *tunSchema               `json:"tun"`
-	TuicServer        *tuicServerSchema        `json:"tuic-server"`
 	ShadowSocksConfig *string                  `json:"ss-config"`
 	VmessConfig       *string                  `json:"vmess-config"`
 	TcptunConfig      *string                  `json:"tcptun-config"`
@@ -113,22 +112,6 @@ type tunSchema struct {
 
 	// gvisor special config (Non-public option; do not include it in the document.)
 	ProcessorsPerChannel *int `yaml:"processors-per-channel" json:"processors-per-channel,omitempty"`
-}
-
-type tuicServerSchema struct {
-	Enable                bool               `yaml:"enable" json:"enable"`
-	Listen                *string            `yaml:"listen" json:"listen"`
-	Token                 *[]string          `yaml:"token" json:"token"`
-	Users                 *map[string]string `yaml:"users" json:"users,omitempty"`
-	Certificate           *string            `yaml:"certificate" json:"certificate"`
-	PrivateKey            *string            `yaml:"private-key" json:"private-key"`
-	CongestionController  *string            `yaml:"congestion-controller" json:"congestion-controller,omitempty"`
-	MaxIdleTime           *int               `yaml:"max-idle-time" json:"max-idle-time,omitempty"`
-	AuthenticationTimeout *int               `yaml:"authentication-timeout" json:"authentication-timeout,omitempty"`
-	ALPN                  *[]string          `yaml:"alpn" json:"alpn,omitempty"`
-	MaxUdpRelayPacketSize *int               `yaml:"max-udp-relay-packet-size" json:"max-udp-relay-packet-size,omitempty"`
-	CWND                  *int               `yaml:"cwnd" json:"cwnd,omitempty"`
-	BBRProfile            *string            `yaml:"bbr-profile" json:"bbr-profile,omitempty"`
 }
 
 func getConfigs(w http.ResponseWriter, r *http.Request) {
@@ -288,48 +271,6 @@ func pointerOrDefaultTun(p *tunSchema, def LC.Tun) LC.Tun {
 	return def
 }
 
-func pointerOrDefaultTuicServer(p *tuicServerSchema, def LC.TuicServer) LC.TuicServer {
-	if p != nil {
-		def.Enable = p.Enable
-		if p.Listen != nil {
-			def.Listen = *p.Listen
-		}
-		if p.Token != nil {
-			def.Token = *p.Token
-		}
-		if p.Users != nil {
-			def.Users = *p.Users
-		}
-		if p.Certificate != nil {
-			def.Certificate = *p.Certificate
-		}
-		if p.PrivateKey != nil {
-			def.PrivateKey = *p.PrivateKey
-		}
-		if p.CongestionController != nil {
-			def.CongestionController = *p.CongestionController
-		}
-		if p.MaxIdleTime != nil {
-			def.MaxIdleTime = *p.MaxIdleTime
-		}
-		if p.AuthenticationTimeout != nil {
-			def.AuthenticationTimeout = *p.AuthenticationTimeout
-		}
-		if p.ALPN != nil {
-			def.ALPN = *p.ALPN
-		}
-		if p.MaxUdpRelayPacketSize != nil {
-			def.MaxUdpRelayPacketSize = *p.MaxUdpRelayPacketSize
-		}
-		if p.CWND != nil {
-			def.CWND = *p.CWND
-		}
-		if p.BBRProfile != nil {
-			def.BBRProfile = *p.BBRProfile
-		}
-	}
-	return def
-}
 
 func patchConfigs(w http.ResponseWriter, r *http.Request) {
 	general := &configSchema{}
@@ -381,7 +322,6 @@ func patchConfigs(w http.ResponseWriter, r *http.Request) {
 	listener.ReCreateTun(pointerOrDefaultTun(general.Tun, listener.LastTunConf), tunnel.Tunnel)
 	listener.ReCreateShadowSocks(pointerOrDefault(general.ShadowSocksConfig, ports.ShadowSocksConfig), tunnel.Tunnel)
 	listener.ReCreateVmess(pointerOrDefault(general.VmessConfig, ports.VmessConfig), tunnel.Tunnel)
-	listener.ReCreateTuic(pointerOrDefaultTuicServer(general.TuicServer, listener.LastTuicConf), tunnel.Tunnel)
 
 	if general.Mode != nil {
 		tunnel.SetMode(*general.Mode)

@@ -28,7 +28,6 @@ const (
 	SOCKS4
 	SOCKS5
 	SHADOWSOCKS
-	SNELL
 	VMESS
 	VLESS
 	REDIR
@@ -36,13 +35,8 @@ const (
 	TROJAN
 	TUNNEL
 	TUN
-	TUIC
 	HYSTERIA2
 	ANYTLS
-	MIERU
-	SUDOKU
-	TRUSTTUNNEL
-	SHADOWQUIC
 	INNER
 )
 
@@ -94,8 +88,6 @@ func (t Type) String() string {
 		return "Socks5"
 	case SHADOWSOCKS:
 		return "ShadowSocks"
-	case SNELL:
-		return "Snell"
 	case VMESS:
 		return "Vmess"
 	case VLESS:
@@ -110,20 +102,10 @@ func (t Type) String() string {
 		return "Tunnel"
 	case TUN:
 		return "Tun"
-	case TUIC:
-		return "Tuic"
 	case HYSTERIA2:
 		return "Hysteria2"
 	case ANYTLS:
 		return "AnyTLS"
-	case MIERU:
-		return "Mieru"
-	case SUDOKU:
-		return "Sudoku"
-	case TRUSTTUNNEL:
-		return "TrustTunnel"
-	case SHADOWQUIC:
-		return "ShadowQuic"
 	case INNER:
 		return "Inner"
 	default:
@@ -144,8 +126,6 @@ func ParseType(t string) (*Type, error) {
 		res = SOCKS5
 	case "SHADOWSOCKS":
 		res = SHADOWSOCKS
-	case "SNELL":
-		res = SNELL
 	case "VMESS":
 		res = VMESS
 	case "VLESS":
@@ -160,20 +140,10 @@ func ParseType(t string) (*Type, error) {
 		res = TUNNEL
 	case "TUN":
 		res = TUN
-	case "TUIC":
-		res = TUIC
 	case "HYSTERIA2":
 		res = HYSTERIA2
 	case "ANYTLS":
 		res = ANYTLS
-	case "MIERU":
-		res = MIERU
-	case "SUDOKU":
-		res = SUDOKU
-	case "TRUSTTUNNEL":
-		res = TRUSTTUNNEL
-	case "SHADOWQUIC":
-		res = SHADOWQUIC
 	case "INNER":
 		res = INNER
 	default:

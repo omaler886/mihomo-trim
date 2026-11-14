@@ -141,7 +141,6 @@ func GetGeneral() *config.General {
 			TProxyPort:        ports.TProxyPort,
 			MixedPort:         ports.MixedPort,
 			Tun:               listener.GetTunConf(),
-			TuicServer:        listener.GetTuicConf(),
 			ShadowSocksConfig: ports.ShadowSocksConfig,
 			VmessConfig:       ports.VmessConfig,
 			Authentication:    authenticator,
@@ -204,7 +203,6 @@ func updateListeners(general *config.General, listeners map[string]C.InboundList
 	listener.ReCreateMixed(general.MixedPort, tunnel.Tunnel)
 	listener.ReCreateShadowSocks(general.ShadowSocksConfig, tunnel.Tunnel)
 	listener.ReCreateVmess(general.VmessConfig, tunnel.Tunnel)
-	listener.ReCreateTuic(general.TuicServer, tunnel.Tunnel)
 }
 
 func updateTun(general *config.General) {

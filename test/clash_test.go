@@ -35,9 +35,7 @@ const (
 	ImageVless           = "teddysun/xray:latest"
 	ImageTrojan          = "trojangfw/trojan:latest"
 	ImageTrojanGo        = "p4gefau1t/trojan-go:latest"
-	ImageSnell           = "ghcr.io/icpz/snell-server:latest"
 	ImageXray            = "teddysun/xray:latest"
-	ImageHysteria        = "tobyxdd/hysteria:latest"
 )
 
 var (
@@ -103,9 +101,7 @@ func init() {
 		ImageVless,
 		ImageTrojan,
 		ImageTrojanGo,
-		ImageSnell,
 		ImageXray,
-		ImageHysteria,
 	}
 
 	for _, image := range images {
