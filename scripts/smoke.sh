@@ -68,4 +68,19 @@ else
   echo "trim-has-server-listener: PASS"
 fi
 
+# 6. 复活审计: 被裁协议的代码不得以任何路径/改名形式回到树里
+#    白名单(保留的共享库, 不参与匹配): transport/tuic/{common,congestion,congestion_v2} 与 transport/gost/websocket
+#    匹配精确到被删子路径, 不会命中白名单
+audit_hits=$(grep -rInE \
+  'transport/(tuic/(types|v4|v5)|snell|ssr|hysteria/|mieru|sudoku|masque|shadowquic|trusttunnel|gost/relay)' \
+  --include='*.go' adapter listener transport common config hub constant dns component 2>/dev/null \
+  | grep -v '_test\.go' | head -5)
+[ -z "$audit_hits" ] || fail "被裁协议代码复活: $audit_hits"
+audit_hits=$(grep -rInE \
+  'adapter/outbound/(shadowsocksr|hysteria|tuic|shadowquic|ssh|snell|mieru|sudoku|gost_relay|masque|trusttunnel)\.go|listener/(tuic|snell|mieru|sudoku|shadowquic|trusttunnel)/' \
+  --include='*.go' adapter listener transport common config hub constant 2>/dev/null \
+  | grep -v '_test\.go' | head -5)
+[ -z "$audit_hits" ] || fail "被裁协议代码复活(引用): $audit_hits"
+echo "resurrection-audit: PASS"
+
 echo "SMOKE-PASS ($VARIANT)"
