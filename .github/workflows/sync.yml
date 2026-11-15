@@ -31,12 +31,12 @@ jobs:
         id: sync
         run: |
           set -u
-          pushed=""; conflicts=""; skipped=""
+          pushed=""; conflicts=""; skipped=""; details=""
           for entry in "main Meta" "lite Meta" "alpha-trim Alpha" "alpha-lite Alpha"; do
             set -- $entry
             br=$1; up=$2
             tip=$(git rev-parse "upstream/$up")
-            base=$(git merge-base "$br" "$tip" 2>/dev/null || echo none)
+            base=$(git merge-base "origin/$br" "$tip" 2>/dev/null || echo none)
             if [ "$base" = "$tip" ]; then
               skipped="$skipped $br"
               continue
@@ -72,7 +72,8 @@ jobs:
               fi
             fi
             if git push --force-with-lease origin "$br" >/dev/null 2>&1; then
-              pushed="$pushed $br($rebase_mode)"
+              pushed="$pushed $br"
+              details="$details $br($rebase_mode)"
             else
               conflicts="$conflicts $br(push-failed)"
             fi
@@ -80,7 +81,7 @@ jobs:
           echo "pushed=$pushed" >> $GITHUB_OUTPUT
           {
             echo "### 上游同步结果"
-            echo "- 直推(触发出产物):${pushed:- 无}"
+            echo "- 直推(触发出产物):${details:- 无}"
             echo "- 无更新:${skipped:- 无}"
             echo "- 冲突待人工:${conflicts:- 无}"
           } >> $GITHUB_STEP_SUMMARY
