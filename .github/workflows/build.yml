@@ -92,7 +92,7 @@ jobs:
             *) VARIANT=lite ;;
           esac
           # 上游同款版本号: <分支名小写>-<短sha>
-          VERSION=$(echo "${{ github.ref_name }}" | tr '[:upper:]' '[:lower:]')-$(git rev-parse --short HEAD)
+          VERSION=${VARIANT}-$(echo "${{ github.ref_name }}" | tr '[:upper:]' '[:lower:]')-$(git rev-parse --short HEAD)
           echo "VARIANT=${VARIANT}" >> $GITHUB_ENV
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo "BUILDTIME=$(date -u '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
