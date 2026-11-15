@@ -8,6 +8,8 @@
 |---|---|
 | `main` | **trim**：删 11 个协议 |
 | `lite` | **lite**：trim 基础上再删全部服务端 listener（纯客户端） |
+| `alpha-trim` | **alpha-trim**：同样的 trim，基于上游 **Alpha 测试分支** @ 184857ce |
+| `alpha-lite` | **alpha-lite**：纯客户端，基于上游 **Alpha 测试分支** |
 
 Actions 自动构建（push 触发，产物挂 Prerelease）：
 - linux-amd64 / linux-arm64
