@@ -150,6 +150,14 @@ jobs:
           path: bin/
           merge-multiple: true
 
+      - name: Delete old release assets
+        uses: 8Mi-Tech/delete-release-assets-action@main
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: Prerelease-${{ github.ref_name }}
+          deleteOnlyFromDrafts: false
+
       - name: Checksums
         run: |
           cd bin/
