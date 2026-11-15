@@ -42,16 +42,39 @@ jobs:
               continue
             fi
             git checkout -B "$br" "origin/$br"
-            if git rebase "$tip" >/dev/null 2>&1; then
-              if git push --force-with-lease origin "$br" >/dev/null 2>&1; then
-                pushed="$pushed $br"
+            rebase_mode="clean"
+            if ! git rebase "$tip" >/dev/null 2>&1; then
+              # 冲突自动解: 仅 modify/deleted-by-us (DU) 类 → 保持删除
+              # 出现语义类冲突(UU/AA/DD/UD/AU/UA) → abort 并报告人工
+              auto_done=0
+              for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+                non_du=$(git status --porcelain | grep -E '^(UU|AA|DD|AU|UA|UD) ' | head -3)
+                if [ -n "$non_du" ]; then break; fi
+                dus=$(git diff --name-only --diff-filter=DU 2>/dev/null)
+                if [ -z "$dus" ]; then
+                  if git status | grep -q "rebase in progress"; then
+                    GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || break
+                  fi
+                  auto_done=1
+                  break
+                fi
+                git rm -q -- $dus
+                GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || break
+                git status | grep -q "rebase in progress" || { auto_done=1; break; }
+              done
+              if [ "$auto_done" = 1 ] && ! git status | grep -q "rebase in progress"; then
+                rebase_mode="auto(modify/delete保持删除)"
               else
-                conflicts="$conflicts $br(push-failed)"
+                git rebase --abort >/dev/null 2>&1 || true
+                files=$(git diff --name-only "$br"..."$tip" | tr '\n' ' ')
+                conflicts="$conflicts $br(裁剪面与上游语义重叠, 涉及: $files)"
+                continue
               fi
+            fi
+            if git push --force-with-lease origin "$br" >/dev/null 2>&1; then
+              pushed="$pushed $br($rebase_mode)"
             else
-              git rebase --abort >/dev/null 2>&1 || true
-              files=$(git diff --name-only "$br"..."$tip" | tr '\n' ' ')
-              conflicts="$conflicts $br(裁剪面与上游重叠, 涉及: $files)"
+              conflicts="$conflicts $br(push-failed)"
             fi
           done
           echo "pushed=$pushed" >> $GITHUB_OUTPUT
