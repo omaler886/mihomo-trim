@@ -11,7 +11,6 @@ env:
 
 jobs:
   build:
-    if: ${{ github.ref_name != 'lite' || matrix.variant != 'trim' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -30,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ matrix.variant == 'lite' && 'lite' || github.ref }}
+          ref: ${{ matrix.variant == 'lite' && 'lite' || (github.ref_name == 'lite' && 'main' || github.ref) }}
           fetch-depth: 1
 
       - uses: actions/setup-go@v5
