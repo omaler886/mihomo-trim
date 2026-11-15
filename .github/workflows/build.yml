@@ -7,25 +7,60 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 env:
   GO_VERSION: "1.26"
 
 jobs:
-  # 稳定版裁剪: main 分支 | 测试版裁剪: alpha-trim 分支
-  build-trim:
-    if: github.ref_name == 'main' || github.ref_name == 'alpha-trim'
+  # 分支→变体: main/alpha-trim => trim, lite/alpha-lite => lite
+  # 命名/压缩/版本号规则与上游 release 完全一致:
+  #   mihomo-<goos>-<output>-<版本>.gz (非 windows) / .zip (windows)
+  #   版本 = <分支名>-<短sha>  (上游为 alpha-<sha> / Meta-<sha>)
+  build:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         platform:
-          - { goos: linux, goarch: amd64, output: linux-amd64, ndk: "" }
-          - { goos: linux, goarch: arm64, output: linux-arm64, ndk: "" }
-          - { goos: android, goarch: arm64, output: android-arm64-v8, ndk: aarch64-linux-android34 }
-          - { goos: android, goarch: arm, goarm: 7, output: android-armv7, ndk: armv7a-linux-androideabi34 }
-          - { goos: windows, goarch: amd64, output: windows-amd64, ndk: "" }
-    name: trim-${{ matrix.platform.output }}
+          # linux
+          - { goos: linux, goarch: '386', output: '386', ndk: "" }
+          - { goos: linux, goarch: '386', go386: softfloat, output: '386-softfloat', ndk: "" }
+          - { goos: linux, goarch: amd64, goamd64: v1, output: amd64-compatible, ndk: "" }
+          - { goos: linux, goarch: amd64, goamd64: v3, output: amd64, ndk: "" }
+          - { goos: linux, goarch: amd64, goamd64: v1, output: amd64-v1, ndk: "" }
+          - { goos: linux, goarch: amd64, goamd64: v2, output: amd64-v2, ndk: "" }
+          - { goos: linux, goarch: amd64, goamd64: v3, output: amd64-v3, ndk: "" }
+          - { goos: linux, goarch: arm64, output: arm64, ndk: "" }
+          - { goos: linux, goarch: arm, goarm: '5', output: armv5, ndk: "" }
+          - { goos: linux, goarch: arm, goarm: '6', output: armv6, ndk: "" }
+          - { goos: linux, goarch: arm, goarm: '7', output: armv7, ndk: "" }
+          - { goos: linux, goarch: mips, gomips: hardfloat, output: mips-hardfloat, ndk: "" }
+          - { goos: linux, goarch: mips, gomips: softfloat, output: mips-softfloat, ndk: "" }
+          - { goos: linux, goarch: mipsle, gomips: hardfloat, output: mipsle-hardfloat, ndk: "" }
+          - { goos: linux, goarch: mipsle, gomips: softfloat, output: mipsle-softfloat, ndk: "" }
+          - { goos: linux, goarch: riscv64, output: riscv64, ndk: "" }
+          - { goos: linux, goarch: s390x, output: s390x, ndk: "" }
+          - { goos: linux, goarch: ppc64le, output: ppc64le, ndk: "" }
+          - { goos: linux, goarch: loong64, output: loong64, ndk: "" }
+          # darwin
+          - { goos: darwin, goarch: amd64, goamd64: v1, output: amd64-compatible, ndk: "" }
+          - { goos: darwin, goarch: amd64, goamd64: v3, output: amd64, ndk: "" }
+          - { goos: darwin, goarch: arm64, output: arm64, ndk: "" }
+          # windows
+          - { goos: windows, goarch: '386', output: '386', ndk: "" }
+          - { goos: windows, goarch: amd64, goamd64: v1, output: amd64-compatible, ndk: "" }
+          - { goos: windows, goarch: amd64, goamd64: v3, output: amd64, ndk: "" }
+          - { goos: windows, goarch: arm64, output: arm64, ndk: "" }
+          # freebsd
+          - { goos: freebsd, goarch: amd64, output: amd64, ndk: "" }
+          - { goos: freebsd, goarch: arm64, output: arm64, ndk: "" }
+          # android
+          - { goos: android, goarch: '386', ndk: i686-linux-android34, output: '386' }
+          - { goos: android, goarch: amd64, ndk: x86_64-linux-android34, output: amd64 }
+          - { goos: android, goarch: arm, goarm: 7, ndk: armv7a-linux-androideabi34, output: armv7 }
+          - { goos: android, goarch: arm64, ndk: aarch64-linux-android34, output: arm64-v8 }
+    name: ${{ matrix.platform.goos }}-${{ matrix.platform.output }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,11 +82,25 @@ jobs:
         run: |
           echo "CC=${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.platform.ndk }}-clang" >> $GITHUB_ENV
           echo "CGO_ENABLED=1" >> $GITHUB_ENV
+          echo "BUILDTAG=" >> $GITHUB_ENV
 
       - name: Set build vars
         run: |
-          echo "VERSION=trim-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "BUILDTIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
+          # 变体: main/alpha-trim => trim, lite/alpha-lite => lite
+          case "${{ github.ref_name }}" in
+            main|alpha-trim) VARIANT=trim ;;
+            *) VARIANT=lite ;;
+          esac
+          # 上游同款版本号: <分支名小写>-<短sha>
+          VERSION=$(echo "${{ github.ref_name }}" | tr '[:upper:]' '[:lower:]')-$(git rev-parse --short HEAD)
+          echo "VARIANT=${VARIANT}" >> $GITHUB_ENV
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "BUILDTIME=$(date -u '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
+          if [ "${{ matrix.platform.ndk }}" = "" ]; then
+            echo "CGO_ENABLED=0" >> $GITHUB_ENV
+            echo "BUILDTAG=-extldflags --static" >> $GITHUB_ENV
+          fi
+          echo "OUTPUT=mihomo-${{ matrix.platform.goos }}-${{ matrix.platform.output }}-${VERSION}" >> $GITHUB_ENV
 
       # 必须带 with_gvisor, 否则 tailscale 是 stub / wireguard gvisor 栈缺失
       - name: Build
@@ -59,88 +108,41 @@ jobs:
           GOOS: ${{ matrix.platform.goos }}
           GOARCH: ${{ matrix.platform.goarch }}
           GOARM: ${{ matrix.platform.goarm }}
+          GOAMD64: ${{ matrix.platform.goamd64 }}
+          GO386: ${{ matrix.platform.go386 }}
+          GOMIPS: ${{ matrix.platform.gomips }}
         run: |
-          CGO_ENABLED=${{ matrix.platform.ndk != '' && 1 || 0 }} \
-          go build -tags "with_gvisor" -trimpath \
-            -ldflags "-s -w -buildid= -X 'github.com/metacubex/mihomo/constant.Version=${{ env.VERSION }}' -X 'github.com/metacubex/mihomo/constant.BuildTime=${{ env.BUILDTIME }}'" \
-            -o mihomo-trim-${{ matrix.platform.output }} .
+          go build -v -tags "with_gvisor" -trimpath \
+            -ldflags "${{ env.BUILDTAG }} -X 'github.com/metacubex/mihomo/constant.Version=${{ env.VERSION }}' -X 'github.com/metacubex/mihomo/constant.BuildTime=${{ env.BUILDTIME }}' -w -s -buildid=" \
+            -o mihomo .
+          cp mihomo "${{ env.OUTPUT }}"
+          if [ "${{ matrix.platform.goos }}" = "windows" ]; then
+            zip -q "${{ env.OUTPUT }}.zip" "${{ env.OUTPUT }}"
+          else
+            gzip -c "${{ env.OUTPUT }}" > "${{ env.OUTPUT }}.gz"
+            rm "${{ env.OUTPUT }}"
+          fi
 
       - name: Smoke
-        if: matrix.platform.output == 'linux-amd64'
-        run: bash scripts/smoke.sh mihomo-trim-linux-amd64 trim
+        if: matrix.platform.output == 'amd64' && matrix.platform.goos == 'linux'
+        run: bash scripts/smoke.sh mihomo ${{ env.VARIANT }}
+
+      - name: Save version
+        run: echo ${{ env.VERSION }} > version.txt
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mihomo-trim-${{ matrix.platform.output }}
-          path: mihomo-trim-${{ matrix.platform.output }}
-
-  # 稳定版纯客户端: lite 分支 | 测试版纯客户端: alpha-lite 分支
-  build-lite:
-    if: github.ref_name == 'lite' || github.ref_name == 'alpha-lite'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - { goos: linux, goarch: amd64, output: linux-amd64, ndk: "" }
-          - { goos: linux, goarch: arm64, output: linux-arm64, ndk: "" }
-          - { goos: android, goarch: arm64, output: android-arm64-v8, ndk: aarch64-linux-android34 }
-          - { goos: android, goarch: arm, goarm: 7, output: android-armv7, ndk: armv7a-linux-androideabi34 }
-          - { goos: windows, goarch: amd64, output: windows-amd64, ndk: "" }
-    name: lite-${{ matrix.platform.output }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Setup NDK
-        if: matrix.platform.ndk != ''
-        uses: nttld/setup-ndk@v1
-        id: ndk
-        with:
-          ndk-version: r27c
-
-      - name: Set NDK env
-        if: matrix.platform.ndk != ''
-        run: |
-          echo "CC=${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.platform.ndk }}-clang" >> $GITHUB_ENV
-          echo "CGO_ENABLED=1" >> $GITHUB_ENV
-
-      - name: Set build vars
-        run: |
-          echo "VERSION=lite-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "BUILDTIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
-
-      - name: Build
-        env:
-          GOOS: ${{ matrix.platform.goos }}
-          GOARCH: ${{ matrix.platform.goarch }}
-          GOARM: ${{ matrix.platform.goarm }}
-        run: |
-          CGO_ENABLED=${{ matrix.platform.ndk != '' && 1 || 0 }} \
-          go build -tags "with_gvisor" -trimpath \
-            -ldflags "-s -w -buildid= -X 'github.com/metacubex/mihomo/constant.Version=${{ env.VERSION }}' -X 'github.com/metacubex/mihomo/constant.BuildTime=${{ env.BUILDTIME }}'" \
-            -o mihomo-lite-${{ matrix.platform.output }} .
-
-      - name: Smoke
-        if: matrix.platform.output == 'linux-amd64'
-        run: bash scripts/smoke.sh mihomo-lite-linux-amd64 lite
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: mihomo-lite-${{ matrix.platform.output }}
-          path: mihomo-lite-${{ matrix.platform.output }}
+          name: ${{ matrix.platform.goos }}-${{ matrix.platform.output }}
+          path: |
+            mihomo-*.gz
+            mihomo-*.zip
+            version.txt
 
   prerelease:
     permissions: write-all
-    needs: [build-trim, build-lite]
-    if: ${{ always() && contains(needs.*.result, 'success') && !contains(needs.*.result, 'failure') }}
+    needs: [build]
+    if: github.ref_type == 'branch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -151,7 +153,7 @@ jobs:
       - name: Checksums
         run: |
           cd bin/
-          sha256sum mihomo-* | sort > checksums.txt
+          find . -type f -not -name "checksums.txt" -not -name "version.txt" | sort | xargs sha256sum > checksums.txt
           cat checksums.txt
 
       - name: Upload prerelease
@@ -162,9 +164,9 @@ jobs:
             bin/*
           prerelease: true
           body: |
-            自动构建 @ ${{ github.sha }} (分支 ${{ github.ref_name }})
+            自动构建 @ ${{ github.sha }} (分支 ${{ github.ref_name }}, 命名与上游 release 一致)
             - **main**: trim @ 上游 Meta (正式版), 删 11 协议
             - **lite**: trim 基础上删全部服务端 listener (纯客户端)
             - **alpha-trim**: trim @ 上游 Alpha (测试版)
             - **alpha-lite**: 纯客户端 @ 上游 Alpha (测试版)
-            - 构建: `-tags with_gvisor` (与官方 release 同款)
+            - 构建: `-tags with_gvisor -trimpath -w -s -buildid=` + CGO 静态链接 (与官方 release 同款)
