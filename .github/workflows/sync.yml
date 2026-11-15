@@ -1,0 +1,73 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "0 1 * * *"   # UTC 01:00 = 北京 09:00
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/MetaCubeX/mihomo.git
+          git fetch upstream Meta Alpha
+
+      - name: Rebase & push
+        id: sync
+        run: |
+          set -u
+          pushed=""; conflicts=""; skipped=""
+          for entry in "main Meta" "lite Meta" "alpha-trim Alpha" "alpha-lite Alpha"; do
+            set -- $entry
+            br=$1; up=$2
+            tip=$(git rev-parse "upstream/$up")
+            base=$(git merge-base "$br" "$tip" 2>/dev/null || echo none)
+            if [ "$base" = "$tip" ]; then
+              skipped="$skipped $br"
+              continue
+            fi
+            git checkout -B "$br" "origin/$br"
+            if git rebase "$tip" >/dev/null 2>&1; then
+              if git push --force-with-lease origin "$br" >/dev/null 2>&1; then
+                pushed="$pushed $br"
+              else
+                conflicts="$conflicts $br(push-failed)"
+              fi
+            else
+              git rebase --abort >/dev/null 2>&1 || true
+              files=$(git diff --name-only "$br"..."$tip" | tr '\n' ' ')
+              conflicts="$conflicts $br(裁剪面与上游重叠, 涉及: $files)"
+            fi
+          done
+          echo "pushed=$pushed" >> $GITHUB_OUTPUT
+          {
+            echo "### 上游同步结果"
+            echo "- 直推(触发出产物):${pushed:- 无}"
+            echo "- 无更新:${skipped:- 无}"
+            echo "- 冲突待人工:${conflicts:- 无}"
+          } >> $GITHUB_STEP_SUMMARY
+
+      - name: Dispatch builds for pushed branches
+        if: steps.sync.outputs.pushed != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for br in ${{ steps.sync.outputs.pushed }}; do
+            gh workflow run build.yml --ref "$br" --repo "$GITHUB_REPOSITORY"
+            echo "dispatched build for $br"
+          done
