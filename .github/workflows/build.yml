@@ -3,33 +3,32 @@ name: Build mihomo-trim
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "lite"]
-    tags: ["v*"]
+    branches: ["main", "lite", "alpha-trim", "alpha-lite"]
+
+permissions:
+  contents: write
 
 env:
   GO_VERSION: "1.26"
 
 jobs:
-  build:
+  # 稳定版裁剪: main 分支 | 测试版裁剪: alpha-trim 分支
+  build-trim:
+    if: github.ref_name == 'main' || github.ref_name == 'alpha-trim'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        variant: [trim, lite]
-        include:
-          - { variant: trim, ref: "" }
-          - { variant: lite, ref: "lite" }
         platform:
           - { goos: linux, goarch: amd64, output: linux-amd64, ndk: "" }
           - { goos: linux, goarch: arm64, output: linux-arm64, ndk: "" }
           - { goos: android, goarch: arm64, output: android-arm64-v8, ndk: aarch64-linux-android34 }
           - { goos: android, goarch: arm, goarm: 7, output: android-armv7, ndk: armv7a-linux-androideabi34 }
           - { goos: windows, goarch: amd64, output: windows-amd64, ndk: "" }
-    name: ${{ matrix.variant }}-${{ matrix.platform.output }}
+    name: trim-${{ matrix.platform.output }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ matrix.variant == 'lite' && 'lite' || (github.ref_name == 'lite' && 'main' || github.ref) }}
           fetch-depth: 1
 
       - uses: actions/setup-go@v5
@@ -51,10 +50,10 @@ jobs:
 
       - name: Set build vars
         run: |
-          echo "VERSION=${{ matrix.variant }}-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "VERSION=trim-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           echo "BUILDTIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
 
-      # 踩坑固化 1: 必须带 with_gvisor, 否则 tailscale 是 stub / wireguard gvisor 栈缺失
+      # 必须带 with_gvisor, 否则 tailscale 是 stub / wireguard gvisor 栈缺失
       - name: Build
         env:
           GOOS: ${{ matrix.platform.goos }}
@@ -64,23 +63,84 @@ jobs:
           CGO_ENABLED=${{ matrix.platform.ndk != '' && 1 || 0 }} \
           go build -tags "with_gvisor" -trimpath \
             -ldflags "-s -w -buildid= -X 'github.com/metacubex/mihomo/constant.Version=${{ env.VERSION }}' -X 'github.com/metacubex/mihomo/constant.BuildTime=${{ env.BUILDTIME }}'" \
-            -o mihomo-${{ matrix.variant }}-${{ matrix.platform.output }} .
-          file mihomo-${{ matrix.variant }}-${{ matrix.platform.output }} || true
+            -o mihomo-trim-${{ matrix.platform.output }} .
 
-      - name: Smoke (linux-amd64 only)
+      - name: Smoke
         if: matrix.platform.output == 'linux-amd64'
-        run: bash scripts/smoke.sh mihomo-${{ matrix.variant }}-linux-amd64 ${{ matrix.variant }}
+        run: bash scripts/smoke.sh mihomo-trim-linux-amd64 trim
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mihomo-${{ matrix.variant }}-${{ matrix.platform.output }}
-          path: mihomo-${{ matrix.variant }}-${{ matrix.platform.output }}*
+          name: mihomo-trim-${{ matrix.platform.output }}
+          path: mihomo-trim-${{ matrix.platform.output }}
+
+  # 稳定版纯客户端: lite 分支 | 测试版纯客户端: alpha-lite 分支
+  build-lite:
+    if: github.ref_name == 'lite' || github.ref_name == 'alpha-lite'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - { goos: linux, goarch: amd64, output: linux-amd64, ndk: "" }
+          - { goos: linux, goarch: arm64, output: linux-arm64, ndk: "" }
+          - { goos: android, goarch: arm64, output: android-arm64-v8, ndk: aarch64-linux-android34 }
+          - { goos: android, goarch: arm, goarm: 7, output: android-armv7, ndk: armv7a-linux-androideabi34 }
+          - { goos: windows, goarch: amd64, output: windows-amd64, ndk: "" }
+    name: lite-${{ matrix.platform.output }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Setup NDK
+        if: matrix.platform.ndk != ''
+        uses: nttld/setup-ndk@v1
+        id: ndk
+        with:
+          ndk-version: r27c
+
+      - name: Set NDK env
+        if: matrix.platform.ndk != ''
+        run: |
+          echo "CC=${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.platform.ndk }}-clang" >> $GITHUB_ENV
+          echo "CGO_ENABLED=1" >> $GITHUB_ENV
+
+      - name: Set build vars
+        run: |
+          echo "VERSION=lite-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "BUILDTIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.platform.goos }}
+          GOARCH: ${{ matrix.platform.goarch }}
+          GOARM: ${{ matrix.platform.goarm }}
+        run: |
+          CGO_ENABLED=${{ matrix.platform.ndk != '' && 1 || 0 }} \
+          go build -tags "with_gvisor" -trimpath \
+            -ldflags "-s -w -buildid= -X 'github.com/metacubex/mihomo/constant.Version=${{ env.VERSION }}' -X 'github.com/metacubex/mihomo/constant.BuildTime=${{ env.BUILDTIME }}'" \
+            -o mihomo-lite-${{ matrix.platform.output }} .
+
+      - name: Smoke
+        if: matrix.platform.output == 'linux-amd64'
+        run: bash scripts/smoke.sh mihomo-lite-linux-amd64 lite
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mihomo-lite-${{ matrix.platform.output }}
+          path: mihomo-lite-${{ matrix.platform.output }}
 
   prerelease:
     permissions: write-all
-    needs: [build]
-    if: github.ref_type == 'branch'
+    needs: [build-trim, build-lite]
+    if: ${{ always() && contains(needs.*.result, 'success') && !contains(needs.*.result, 'failure') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -102,7 +162,9 @@ jobs:
             bin/*
           prerelease: true
           body: |
-            mihomo 精简版自动构建 @ ${{ github.sha }}
-            - **trim**: 保留 vless/vmess/hysteria2/ss/trojan/anytls/zerotier + wireguard/openvpn/tailscale/easytier + socks5/http, 删除 11 个协议
-            - **lite**: trim 基础上再删全部服务端 listener (纯客户端)
+            自动构建 @ ${{ github.sha }} (分支 ${{ github.ref_name }})
+            - **main**: trim @ 上游 Meta (正式版), 删 11 协议
+            - **lite**: trim 基础上删全部服务端 listener (纯客户端)
+            - **alpha-trim**: trim @ 上游 Alpha (测试版)
+            - **alpha-lite**: 纯客户端 @ 上游 Alpha (测试版)
             - 构建: `-tags with_gvisor` (与官方 release 同款)
