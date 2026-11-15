@@ -34,13 +34,6 @@ func ParseProxy(mapping map[string]any, options ...ProxyOption) (C.Proxy, error)
 			break
 		}
 		proxy, err = outbound.NewShadowSocks(*ssOption)
-	case "ssr":
-		ssrOption := &outbound.ShadowSocksROption{BasicOption: basicOption}
-		err = decoder.Decode(mapping, ssrOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewShadowSocksR(*ssrOption)
 	case "socks5":
 		socksOption := &outbound.Socks5Option{BasicOption: basicOption}
 		err = decoder.Decode(mapping, socksOption)
@@ -69,13 +62,6 @@ func ParseProxy(mapping map[string]any, options ...ProxyOption) (C.Proxy, error)
 			break
 		}
 		proxy, err = outbound.NewVless(*vlessOption)
-	case "snell":
-		snellOption := &outbound.SnellOption{BasicOption: basicOption}
-		err = decoder.Decode(mapping, snellOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewSnell(*snellOption)
 	case "trojan":
 		trojanOption := &outbound.TrojanOption{BasicOption: basicOption}
 		err = decoder.Decode(mapping, trojanOption)
@@ -83,13 +69,6 @@ func ParseProxy(mapping map[string]any, options ...ProxyOption) (C.Proxy, error)
 			break
 		}
 		proxy, err = outbound.NewTrojan(*trojanOption)
-	case "hysteria":
-		hyOption := &outbound.HysteriaOption{BasicOption: basicOption}
-		err = decoder.Decode(mapping, hyOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewHysteria(*hyOption)
 	case "hysteria2":
 		hyOption := &outbound.Hysteria2Option{BasicOption: basicOption}
 		err = decoder.Decode(mapping, hyOption)
@@ -104,27 +83,6 @@ func ParseProxy(mapping map[string]any, options ...ProxyOption) (C.Proxy, error)
 			break
 		}
 		proxy, err = outbound.NewWireGuard(*wgOption)
-	case "tuic":
-		tuicOption := &outbound.TuicOption{BasicOption: basicOption}
-		err = decoder.Decode(mapping, tuicOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewTuic(*tuicOption)
-	case "shadowquic":
-		shadowQuicOption := &outbound.ShadowQuicOption{BasicOption: basicOption}
-		err = decoder.Decode(mapping, shadowQuicOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewShadowQuic(*shadowQuicOption)
-	case "gost-relay":
-		relayOption := &outbound.GostRelayOption{BasicOption: basicOption}
-		err = decoder.Decode(mapping, relayOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewGostRelay(*relayOption)
 	case "direct":
 		directOption := &outbound.DirectOption{BasicOption: basicOption}
 		err = decoder.Decode(mapping, directOption)
@@ -153,20 +111,6 @@ func ParseProxy(mapping map[string]any, options ...ProxyOption) (C.Proxy, error)
 			break
 		}
 		proxy, err = outbound.NewRematch(*rematchOption)
-	case "ssh":
-		sshOption := &outbound.SshOption{BasicOption: basicOption}
-		err = decoder.Decode(mapping, sshOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewSsh(*sshOption)
-	case "mieru":
-		mieruOption := &outbound.MieruOption{BasicOption: basicOption}
-		err = decoder.Decode(mapping, mieruOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewMieru(*mieruOption)
 	case "anytls":
 		anytlsOption := &outbound.AnyTLSOption{BasicOption: basicOption}
 		err = decoder.Decode(mapping, anytlsOption)
@@ -174,27 +118,6 @@ func ParseProxy(mapping map[string]any, options ...ProxyOption) (C.Proxy, error)
 			break
 		}
 		proxy, err = outbound.NewAnyTLS(*anytlsOption)
-	case "sudoku":
-		sudokuOption := &outbound.SudokuOption{BasicOption: basicOption}
-		err = decoder.Decode(mapping, sudokuOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewSudoku(*sudokuOption)
-	case "masque":
-		masqueOption := &outbound.MasqueOption{BasicOption: basicOption}
-		err = decoder.Decode(mapping, masqueOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewMasque(*masqueOption)
-	case "trusttunnel":
-		trustTunnelOption := &outbound.TrustTunnelOption{BasicOption: basicOption}
-		err = decoder.Decode(mapping, trustTunnelOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewTrustTunnel(*trustTunnelOption)
 	case "openvpn":
 		openVPNOption := &outbound.OpenVPNOption{BasicOption: basicOption}
 		err = decoder.Decode(mapping, openVPNOption)
