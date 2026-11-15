@@ -38,6 +38,14 @@ Actions 自动构建（push 触发，产物挂 Prerelease）：
 - 性能：延迟 4-10ms、TLS 路径 100-350MB/s（与官方同级）；体积比官方小 ~8-10%；lite 内存最低
 - 并发：6 实例并发压测无死亡、无 OOM
 
+## 上游自动同步
+
+`sync_upstream.sh`（仓库外，本地定时任务每天 09:00 跑一次）：
+1. fetch 上游 Meta/Alpha 新提交
+2. 四分支分别 rebase 重放裁剪提交
+3. 构建 linux-amd64 上测试机跑冒烟（五项断言）
+4. **冒烟绿 = 自动直推**（CI 自动出新产物）；冲突/冒烟红 = 中止留现场待人工
+
 ## CI 冒烟（scripts/smoke.sh）
 
 每次构建断言：二进制平台正确、保留协议可解析、11 个被裁协议全部 unsupport、lite 无服务端 listener、版本含构建标记。
