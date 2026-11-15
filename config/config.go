@@ -77,8 +77,6 @@ type Inbound struct {
 	TProxyPort        int            `json:"tproxy-port"`
 	MixedPort         int            `json:"mixed-port"`
 	Tun               LC.Tun         `json:"tun"`
-	ShadowSocksConfig string         `json:"ss-config"`
-	VmessConfig       string         `json:"vmess-config"`
 	Authentication    []string       `json:"authentication"`
 	SkipAuthPrefixes  []netip.Prefix `json:"skip-auth-prefixes"`
 	LanAllowedIPs     []netip.Prefix `json:"lan-allowed-ips"`
@@ -393,8 +391,6 @@ type RawConfig struct {
 	RedirPort                     int                     `yaml:"redir-port" json:"redir-port"`
 	TProxyPort                    int                     `yaml:"tproxy-port" json:"tproxy-port"`
 	MixedPort                     int                     `yaml:"mixed-port" json:"mixed-port"`
-	ShadowSocksConfig             string                  `yaml:"ss-config" json:"ss-config"`
-	VmessConfig                   string                  `yaml:"vmess-config" json:"vmess-config"`
 	InboundTfo                    bool                    `yaml:"inbound-tfo" json:"inbound-tfo"`
 	InboundMPTCP                  bool                    `yaml:"inbound-mptcp" json:"inbound-mptcp"`
 	Authentication                []string                `yaml:"authentication" json:"authentication"`
@@ -736,8 +732,6 @@ func parseGeneral(cfg *RawConfig) (*General, error) {
 			RedirPort:         cfg.RedirPort,
 			TProxyPort:        cfg.TProxyPort,
 			MixedPort:         cfg.MixedPort,
-			ShadowSocksConfig: cfg.ShadowSocksConfig,
-			VmessConfig:       cfg.VmessConfig,
 			AllowLan:          cfg.AllowLan,
 			SkipAuthPrefixes:  cfg.SkipAuthPrefixes,
 			LanAllowedIPs:     cfg.LanAllowedIPs,

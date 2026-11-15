@@ -40,8 +40,6 @@ type configSchema struct {
 	TProxyPort        *int                     `json:"tproxy-port"`
 	MixedPort         *int                     `json:"mixed-port"`
 	Tun               *tunSchema               `json:"tun"`
-	ShadowSocksConfig *string                  `json:"ss-config"`
-	VmessConfig       *string                  `json:"vmess-config"`
 	TcptunConfig      *string                  `json:"tcptun-config"`
 	UdptunConfig      *string                  `json:"udptun-config"`
 	AllowLan          *bool                    `json:"allow-lan"`
@@ -320,8 +318,6 @@ func patchConfigs(w http.ResponseWriter, r *http.Request) {
 	listener.ReCreateTProxy(pointerOrDefault(general.TProxyPort, ports.TProxyPort), tunnel.Tunnel)
 	listener.ReCreateMixed(pointerOrDefault(general.MixedPort, ports.MixedPort), tunnel.Tunnel)
 	listener.ReCreateTun(pointerOrDefaultTun(general.Tun, listener.LastTunConf), tunnel.Tunnel)
-	listener.ReCreateShadowSocks(pointerOrDefault(general.ShadowSocksConfig, ports.ShadowSocksConfig), tunnel.Tunnel)
-	listener.ReCreateVmess(pointerOrDefault(general.VmessConfig, ports.VmessConfig), tunnel.Tunnel)
 
 	if general.Mode != nil {
 		tunnel.SetMode(*general.Mode)
